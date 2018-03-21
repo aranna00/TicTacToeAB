@@ -18,6 +18,8 @@ Player otherPlayer(Player player) {
     }
 }
 
+int maxPly = 5;
+
 int eval(const State &board, const Player &player) {
     int score = 0;
     // add individual scores
@@ -74,8 +76,7 @@ int eval(const State &board, const Player &player) {
     return score;
 }
 
-// split up in alphabeta and minimax
-Move alphaBeta(const State &board, int ply, Player maxPlayer = Player::None) {
+int alphaBeta(const State &board, int ply, Player maxPlayer = Player::None, int min = INT32_MIN, int max = INT32_MAX) {
     AB bestAB;
     if (maxPlayer == Player::None) {
         maxPlayer = getCurrentPlayer(board);
@@ -85,34 +86,45 @@ Move alphaBeta(const State &board, int ply, Player maxPlayer = Player::None) {
 
     if (moves.empty() || ply == 0) {
         int score = eval(board, maxPlayer);
-        std::cout << score << "\t";
         return score;
     }
 
     if (maxPlayer == getCurrentPlayer(board)) {
-        bestAB.score = INT32_MIN;
+        bestAB.score = min;
         for (int move:getMoves(board)) {
             State newBoard = doMove(board, move);
-            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer);
+            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer, bestAB.score, max);
             if (evalScore > bestAB.score) {
                 bestAB.score = evalScore;
                 bestAB.move = move;
             }
+            if (bestAB.score > max) {
+                if (ply != maxPly)
+                    return max;
+            }
         }
-        std::cout << bestAB.move << "\t\t" << std::endl;
+
+        if (ply != maxPly)
+            return bestAB.score;
 
         return bestAB.move;
     } else {
-        bestAB.score = INT32_MAX;
+        bestAB.score = max;
         for (int move:getMoves(board)) {
             State newBoard = doMove(board, move);
-            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer);
+            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer, min, bestAB.score);
             if (evalScore < bestAB.score) {
                 bestAB.score = evalScore;
                 bestAB.move = move;
             }
+            if (bestAB.score < min) {
+                if (ply != maxPly)
+                    return min;
+            };
         }
-        std::cout << bestAB.move << "\t\t" << std::endl;
+
+        if (ply != maxPly)
+            return bestAB.score;
 
         return bestAB.move;
     }
@@ -148,7 +160,7 @@ int main() {
             std::cin >> m;
             board = doMove(board, m);
         } else {
-            board = doMove(board, alphaBeta(board, 3));
+            board = doMove(board, alphaBeta(board, maxPly));
         }
         std::cout << board << std::endl;
         moves = getMoves(board);
