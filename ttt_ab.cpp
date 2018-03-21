@@ -4,12 +4,19 @@
 #include <iostream>
 #include <algorithm>
 #include <map>
-#include <limits>
 #include "ttt.h"
 
 enum class PlayerType {
     Human, Computer
 };
+
+Player otherPlayer(Player player) {
+    if (player == Player::O) {
+        return Player::X;
+    } else {
+        return Player::O;
+    }
+}
 
 int eval(const State &board, const Player &player) {
     int score = 0;
@@ -17,14 +24,15 @@ int eval(const State &board, const Player &player) {
     for (int i = 0; i < 9; ++i) {
         if (board[i] == player) {
             score++;
-        } else if (board[i] != player && board[i] != Player::None) {
+        } else if (board[i] == otherPlayer(player)) {
             score--;
         }
     }
+
     // add winner scores
     if (getWinner(board) == player) {
         score += 100;
-    } else if (getWinner(board) != player && getWinner(board) != Player::None) {
+    } else if (getWinner(board) == otherPlayer(player)) {
         score -= 100;
     }
 
@@ -34,7 +42,7 @@ int eval(const State &board, const Player &player) {
             if (board[yH * 3 + xH] == board[yH * 3 + xH + 1]) {
                 if (board[yH * 3 + xH] == player) {
                     score += 10;
-                } else if (board[yH * 3 + xH] != Player::None) {
+                } else if (board[yH * 3 + xH] == otherPlayer(player)) {
                     score -= 10;
                 }
             }
@@ -45,9 +53,9 @@ int eval(const State &board, const Player &player) {
     for (int xV = 0; xV < 3; ++xV) {
         for (int yV = 0; yV < 2; ++yV) {
             if (board[yV * 3 + xV] == board[yV * 3 + xV + 3]) {
-                if (board[xV * 3 + yV] == player) {
+                if (board[yV * 3 + xV] == player) {
                     score += 10;
-                } else if (board[xV * 3 + yV] != player && board[xV * 3 + yV] != Player::None) {
+                } else if (board[yV * 3 + xV] == otherPlayer(player)) {
                     score -= 10;
                 }
             }
@@ -55,10 +63,10 @@ int eval(const State &board, const Player &player) {
     }
 
     // check diagonals
-    if ((board[0] == board[4] || board[4] == board[8]) || (board[2] == board[4] || board[4] == board[6])) {
+    if (board[0] == board[4] || board[4] == board[8] || board[2] == board[4] || board[4] == board[6]) {
         if (board[4] == player) {
             score += 10;
-        } else if (board[4] != player && board[4] != Player::None) {
+        } else if (board[4] == otherPlayer(player)) {
             score -= 10;
         }
     }
@@ -66,42 +74,48 @@ int eval(const State &board, const Player &player) {
     return score;
 }
 
-Move alphaBeta(const State &board, int ply) {
-    std::string type;
+// split up in alphabeta and minimax
+Move alphaBeta(const State &board, int ply, Player maxPlayer = Player::None) {
     AB bestAB;
-    if (ply % 2 == 0) {
-        type == "max";
-        bestAB.score = INT32_MIN;
-    } else {
-        type == "min";
-        bestAB.score = INT32_MAX;
+    if (maxPlayer == Player::None) {
+        maxPlayer = getCurrentPlayer(board);
     }
+
     std::vector<Move> moves = getMoves(board);
 
-    if (moves.empty() || getWinner(board) != Player::None || ply == 0) {
-        return eval(board, getCurrentPlayer(board));
+    if (moves.empty() || ply == 0) {
+        int score = eval(board, maxPlayer);
+        std::cout << score << "\t";
+        return score;
     }
 
-    for (int move:getMoves(board)) {
-        State newBoard = board;
-        doMove(newBoard, move);
-        int evalScore = alphaBeta(board, ply - 1);
-        std::cout << evalScore << "\t";
-        if (type == "max") {
+    if (maxPlayer == getCurrentPlayer(board)) {
+        bestAB.score = INT32_MIN;
+        for (int move:getMoves(board)) {
+            State newBoard = doMove(board, move);
+            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer);
             if (evalScore > bestAB.score) {
                 bestAB.score = evalScore;
                 bestAB.move = move;
             }
-        } else {
+        }
+        std::cout << bestAB.move << "\t\t" << std::endl;
+
+        return bestAB.move;
+    } else {
+        bestAB.score = INT32_MAX;
+        for (int move:getMoves(board)) {
+            State newBoard = doMove(board, move);
+            int evalScore = alphaBeta(newBoard, ply - 1, maxPlayer);
             if (evalScore < bestAB.score) {
                 bestAB.score = evalScore;
                 bestAB.move = move;
             }
         }
-    }
-    std::cout << std::endl;
+        std::cout << bestAB.move << "\t\t" << std::endl;
 
-    return bestAB.move;
+        return bestAB.move;
+    }
 }
 
 int main() {
@@ -134,7 +148,7 @@ int main() {
             std::cin >> m;
             board = doMove(board, m);
         } else {
-            board = doMove(board, alphaBeta(board, 5));
+            board = doMove(board, alphaBeta(board, 3));
         }
         std::cout << board << std::endl;
         moves = getMoves(board);
