@@ -99,8 +99,7 @@ int alphaBeta(const State &board, int ply, Player maxPlayer = Player::None, int 
                 bestAB.move = move;
             }
             if (bestAB.score > max) {
-                if (ply != maxPly)
-                    return max;
+                return max;
             }
         }
 
@@ -118,8 +117,7 @@ int alphaBeta(const State &board, int ply, Player maxPlayer = Player::None, int 
                 bestAB.move = move;
             }
             if (bestAB.score < min) {
-                if (ply != maxPly)
-                    return min;
+                return min;
             };
         }
 
